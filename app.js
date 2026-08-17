@@ -9,12 +9,16 @@ const app = express();
 const allowedOrigins = [
   'http://localhost:5173',
   'http://127.0.0.1:5173',
-  'http://192.168.1.23:5173'
+  'http://192.168.1.4:5173'
 ];
 
 app.use(cors({
   origin: function (origin, callback) {
-    if (!origin || allowedOrigins.indexOf(origin) !== -1) {
+    if (!origin) return callback(null, true);
+    
+    // Check if origin is whitelisted or is a Vercel deployment URL
+    const isAllowed = allowedOrigins.indexOf(origin) !== -1 || origin.includes('.vercel.app');
+    if (isAllowed) {
       callback(null, true);
     } else {
       callback(new Error('Not allowed by CORS'));
