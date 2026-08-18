@@ -51,7 +51,8 @@ exports.uploadReport = async (req, res, next) => {
       const form = new FormData();
       form.append('file', fs.createReadStream(req.file.path));
 
-      const pythonRes = await axios.post('http://127.0.0.1:8000/analyze-file', form, {
+      const pythonServiceUrl = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+      const pythonRes = await axios.post(`${pythonServiceUrl}/analyze-file`, form, {
         headers: {
           ...form.getHeaders(),
           'x-gemini-api-key': process.env.GEMINI_API_KEY || ''
@@ -105,7 +106,8 @@ exports.chatWithAI = async (req, res, next) => {
     form.append('message', message);
     form.append('report_text', reportText || '');
 
-    const pythonRes = await axios.post('http://127.0.0.1:8000/chat', form, {
+    const pythonServiceUrl = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+    const pythonRes = await axios.post(`${pythonServiceUrl}/chat`, form, {
       headers: {
         ...form.getHeaders(),
         'x-gemini-api-key': process.env.GEMINI_API_KEY || ''

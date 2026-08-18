@@ -53,7 +53,8 @@ app.post('/api/public/hospital-chat', async (req, res, next) => {
     const form = new FormData();
     form.append('message', message);
 
-    const pythonRes = await axios.post('http://127.0.0.1:8000/public-chat', form, {
+    const pythonServiceUrl = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
+    const pythonRes = await axios.post(`${pythonServiceUrl}/public-chat`, form, {
       headers: {
         ...form.getHeaders(),
         'x-gemini-api-key': process.env.GEMINI_API_KEY || ''
