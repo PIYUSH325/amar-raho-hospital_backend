@@ -6,6 +6,7 @@ const ocrService = require('../services/ocrService');
 const axios = require('axios');
 const FormData = require('form-data');
 const fs = require('fs');
+const notificationService = require('../services/notificationService');
 
 // @desc    Get currently logged in patient's profile details
 // @route   GET /api/patients/me
@@ -34,7 +35,7 @@ exports.uploadReport = async (req, res, next) => {
     if (!title || title.trim() === '') {
       return res.status(400).json({ success: false, message: 'Please enter a title for the report.' });
     }
-    let patient = await Patient.findOne({ user: req.user.id });
+    let patient = await Patient.findOne({ user: req.user.id }).populate('user');
 
     if (!patient) {
       return res.status(404).json({ success: false, message: 'Patient profile not found.' });
@@ -83,6 +84,11 @@ exports.uploadReport = async (req, res, next) => {
     });
     
     await patient.save();
+
+    // Send AI Report Analysis Email (Non-blocking)
+    if (patient.user && patient.user.email) {
+      notificationService.sendAiReportEmail(patient.user.email, patient.user.name, title, aiAnalysis);
+    }
 
     res.status(201).json({
       success: true,
@@ -149,7 +155,7 @@ exports.toggleTodoTask = async (req, res, next) => {
 
 exports.checkMissedTasks = async (req, res, next) => {
   try {
-    const patient = await Patient.findOne({ user: req.user.id }).populate('user', 'name');
+    const patient = await Patient.findOne({ user: req.user.id }).populate('user', 'name email');
     if (!patient) {
       return res.status(404).json({ success: false, message: 'Patient profile not found.' });
     }
@@ -160,8 +166,7 @@ exports.checkMissedTasks = async (req, res, next) => {
     const currentTimeVal = currentHours * 60 + currentMinutes;
 
     let updated = false;
-    const patientUser = await User.findById(req.user.id);
-    const patientName = patientUser ? patientUser.name : 'Patient';
+    const patientName = patient.user ? patient.user.name : 'Patient';
 
     for (let task of patient.dietPlan) {
       if (!task.isCompleted && !task.missedAlertSent) {
@@ -185,6 +190,11 @@ exports.checkMissedTasks = async (req, res, next) => {
               patient: req.user.id,
               message: `⚠️ Patient "${patientName}" did not follow their diet plan: Missed "${task.task}" scheduled by ${task.targetTime}!`
             });
+          }
+
+          // Send Missed Task Email Notification (Non-blocking)
+          if (patient.user && patient.user.email) {
+            notificationService.sendMissedTaskEmail(patient.user.email, patientName, task);
           }
         }
       }

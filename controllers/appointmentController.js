@@ -1,4 +1,9 @@
 const Appointment = require('../models/Appointment');
+const notificationService = require('../services/notificationService');
+
+// @desc    Book a new appointment
+// @route   POST /api/appointments
+// @access  Private
 exports.bookAppointment = async (req, res, next) => {
   try {
     const { name, email, mobile, doctor, date, time, problem, doctorRef } = req.body;
@@ -19,6 +24,9 @@ exports.bookAppointment = async (req, res, next) => {
       problem
     });
 
+    // Send Appointment Confirmation Request Email (Non-blocking)
+    notificationService.sendAppointmentRequestEmail(appointment);
+
     res.status(201).json({
       success: true,
       message: 'Appointment booked successfully',
@@ -30,6 +38,7 @@ exports.bookAppointment = async (req, res, next) => {
 };
 
 // @route   GET /api/appointments/my
+// @access  Private
 exports.getMyAppointments = async (req, res, next) => {
   try {
     let appointments;
@@ -62,6 +71,9 @@ exports.cancelAppointment = async (req, res, next) => {
 
     appointment.status = 'Cancelled';
     await appointment.save();
+
+    // Send Appointment Cancellation Email (Non-blocking)
+    notificationService.sendAppointmentStatusEmail(appointment, 'Cancelled');
 
     res.json({
       success: true,

@@ -6,6 +6,7 @@ const Patient = require('../models/Patient');
 const Hospital = require('../models/Hospital');
 const Department = require('../models/Department');
 const bcrypt = require('bcryptjs');
+const notificationService = require('../services/notificationService');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/stats
@@ -287,6 +288,10 @@ exports.updateAppointmentStatus = async (req, res, next) => {
       { new: true }
     );
     if (!appointment) return res.status(404).json({ success: false, message: 'Appointment not found' });
+
+    // Send Appointment Status Update Email (Non-blocking)
+    notificationService.sendAppointmentStatusEmail(appointment, status);
+
     res.json({ success: true, message: 'Appointment status updated', data: appointment });
   } catch (error) {
     next(error);
