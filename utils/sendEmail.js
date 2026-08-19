@@ -9,7 +9,7 @@ const sendEmail = async (options) => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS
     },
-    family: 4 // Force IPv4 to prevent ENETUNREACH / connection timeout on Render
+    family: 4 
   });
 
   const mailOptions = {
