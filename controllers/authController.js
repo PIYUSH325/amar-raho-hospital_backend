@@ -136,7 +136,7 @@ exports.forgotPassword = async (req, res, next) => {
     const resetUrl = `${frontendUrl}/reset-password/${resetToken}`;
 
     // Send Forgot Password Email (Non-blocking)
-    await notificationService.sendForgotPasswordEmail(user, resetUrl);
+    notificationService.sendForgotPasswordEmail(user, resetUrl);
 
     res.json({ success: true, message: 'Reset email sent successfully' });
   } catch (error) {
