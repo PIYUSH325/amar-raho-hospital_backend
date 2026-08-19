@@ -46,6 +46,26 @@ const initSocket = (server) => {
       socket.to(roomId).emit('typing_status', { isTyping, senderName });
     });
 
+    // 4. WebRTC Signaling Event Routing
+    socket.on('call_user', ({ roomId, offer, callerName, type }) => {
+      console.log(`📞 Routing call_user event in Room: ${roomId} from: ${callerName}`);
+      socket.to(roomId).emit('incoming_call', { offer, callerName, type });
+    });
+
+    socket.on('accept_call', ({ roomId, answer }) => {
+      console.log(`📞 Routing accept_call event in Room: ${roomId}`);
+      socket.to(roomId).emit('call_accepted', { answer });
+    });
+
+    socket.on('ice_candidate', ({ roomId, candidate }) => {
+      socket.to(roomId).emit('ice_candidate', { candidate });
+    });
+
+    socket.on('end_call', ({ roomId }) => {
+      console.log(`📞 Routing end_call event in Room: ${roomId}`);
+      socket.to(roomId).emit('call_ended');
+    });
+
     socket.on('disconnect', () => {
       console.log('🔌 Socket Client disconnected:', socket.id);
     });
