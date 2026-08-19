@@ -1,11 +1,11 @@
-const app = require('./app');
 const dotenv = require('dotenv');
+// Load configurations
+dotenv.config();
+
+const app = require('./app');
 const connectDB = require('./config/db');
 const http = require('http');
 const initSocket = require('./socket'); // Import socket config
-
-// Load configurations
-dotenv.config();
 
 // Connect to Database
 connectDB();
