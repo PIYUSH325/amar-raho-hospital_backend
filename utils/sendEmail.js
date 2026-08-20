@@ -22,7 +22,10 @@ const sendEmail = async (options) => {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS
     },
-    family: 4 // Force IPv4
+    family: 4, // Force IPv4
+    tls: {
+      rejectUnauthorized: false // Bypass SSL certificate name mismatch when using direct IPv4 IPs
+    }
   });
 
   const mailOptions = {

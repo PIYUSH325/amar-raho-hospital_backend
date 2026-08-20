@@ -18,9 +18,15 @@ const initSocket = (server) => {
       console.log(`🏠 Socket client ${socket.id} joined room: ${roomId}`);
     });
 
+    // 1b. Register User for Global Notifications
+    socket.on('register', ({ userId }) => {
+      socket.join(`user_${userId}`);
+      console.log(`👤 User registered in socket room: user_${userId}`);
+    });
+
     // 2. Real-time Message Send
     socket.on('send_message', async (messageData) => {
-      const { roomId, senderId, recipientId, patientId, doctorId, text } = messageData;
+      const { roomId, senderId, recipientId, patientId, doctorId, text, senderName } = messageData;
       console.log(`✉️ Received send_message event for Room ID: ${roomId} from sender: ${senderId}`);
 
       try {
@@ -36,6 +42,13 @@ const initSocket = (server) => {
         // Broadcast to the room
         io.to(roomId).emit('receive_message', savedMsg);
         console.log(`📢 Broadcasted receive_message to room: ${roomId}`);
+
+        // Broadcast notification to recipient's personal user room
+        io.to(`user_${recipientId}`).emit('receive_message_notification', {
+          msg: savedMsg,
+          senderName: senderName || 'Someone'
+        });
+        console.log(`🔔 Emitted notification alert to user room: user_${recipientId}`);
       } catch (err) {
         console.error('❌ Error saving socket message:', err);
       }

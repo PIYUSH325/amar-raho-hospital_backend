@@ -37,6 +37,7 @@ app.use('/api/medical-records', require('./routes/medicalRecordRoutes'));
 app.use('/api/prescriptions', require('./routes/prescriptionRoutes'));
 app.use('/api/admin', require('./routes/adminRoutes'));
 app.use('/api/contact', require('./routes/contactRoutes'));
+app.use('/api/diet', require('./routes/dietRoutes'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/chats', require('./routes/chatRoutes'));
 
