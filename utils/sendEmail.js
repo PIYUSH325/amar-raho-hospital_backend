@@ -17,6 +17,8 @@ const sendEmail = async (options) => {
     apiKey = apiKey.replace(/['"]+/g, '').trim();
   }
 
+  console.log(`[EMAIL DEBUG] API Key length: ${apiKey ? apiKey.length : 0}, startsWith: ${apiKey ? apiKey.substring(0, 15) : 'N/A'}, endsWith: ${apiKey ? apiKey.substring(apiKey.length - 5) : 'N/A'}`);
+
   if (!apiKey) {
     console.error("❌ BREVO_API_KEY is not defined in environment variables!");
     throw new Error("Email sending failed: API key missing");
