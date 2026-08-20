@@ -10,7 +10,12 @@ const axios = require('axios');
  * @param {string} options.html - Email body in HTML format
  */
 const sendEmail = async (options) => {
-  const apiKey = process.env.BREVO_API_KEY;
+  let apiKey = process.env.BREVO_API_KEY;
+
+  if (apiKey) {
+    // Strip any accidental double/single quotes or spaces added by Railway
+    apiKey = apiKey.replace(/['"]+/g, '').trim();
+  }
 
   if (!apiKey) {
     console.error("❌ BREVO_API_KEY is not defined in environment variables!");
@@ -18,8 +23,11 @@ const sendEmail = async (options) => {
   }
 
   // Define sender information
-  const senderName = process.env.SMTP_FROM_NAME || 'Amar Raho Hospital';
-  const senderEmail = process.env.SMTP_FROM_EMAIL || 'p3431037@gmail.com'; // Your verified Brevo sender email
+  const senderName = (process.env.SMTP_FROM_NAME || 'Amar Raho Hospital').replace(/['"]+/g, '').trim();
+  let senderEmail = process.env.SMTP_FROM_EMAIL || 'piyushth090@gmail.com'; // Your verified Brevo sender email
+  if (senderEmail) {
+    senderEmail = senderEmail.replace(/['"]+/g, '').trim();
+  }
 
   const data = {
     sender: {
