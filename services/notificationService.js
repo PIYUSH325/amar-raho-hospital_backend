@@ -1,5 +1,56 @@
 const sendEmail = require('../utils/sendEmail');
 
+// Helper to parse date ("2026-08-25") and time ("10:30 AM") strings into a JS Date object
+const parseDateTime = (dateStr, timeStr) => {
+  const [time, modifier] = timeStr.split(' ');
+  let [hours, minutes] = time.split(':').map(Number);
+  if (modifier === 'PM' && hours < 12) hours += 12;
+  if (modifier === 'AM' && hours === 12) hours = 0;
+  
+  return new Date(`${dateStr}T${String(hours).padStart(2, '0')}:${String(minutes).padStart(2, '0')}:00`);
+};
+
+// Helper to format Date objects into standard iCalendar YYYYMMDDTHHmmssZ format
+const formatIcsDate = (date) => {
+  return date.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z';
+};
+
+// Generates the raw iCalendar invite structure (.ics file content)
+const generateIcsString = (appointment) => {
+  const start = parseDateTime(appointment.date, appointment.time);
+  const end = new Date(start.getTime() + 30 * 60000); // 30-minute duration
+
+  const stamp = formatIcsDate(new Date());
+  const dtstart = formatIcsDate(start);
+  const dtend = formatIcsDate(end);
+
+  return [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Amar Raho Hospital//EN',
+    'CALSCALE:GREGORIAN',
+    'METHOD:REQUEST',
+    'BEGIN:VEVENT',
+    `UID:appointment_${appointment._id}@amarrahohospital.com`,
+    `DTSTAMP:${stamp}`,
+    `DTSTART:${dtstart}`,
+    `DTEND:${dtend}`,
+    `SUMMARY:Medical Consultation: Dr. ${appointment.doctor}`,
+    `DESCRIPTION:Consultation appointment for ${appointment.name}. Reported issue: ${appointment.problem}. Join link is available on your dashboard.`,
+    'LOCATION:Amar Raho Hospital (Online Portal)',
+    'STATUS:CONFIRMED',
+    'SEQUENCE:0',
+    'BEGIN:VALARM',
+    'TRIGGER:-PT15M',
+    'ACTION:DISPLAY',
+    `DESCRIPTION:Reminder: Your consultation with Dr. ${appointment.doctor} starts in 15 minutes.`,
+    'END:VALARM',
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].join('\r\n');
+};
+
+
 // 1. Welcome Onboarding Email
 exports.sendWelcomeEmail = async (user) => {
   try {
@@ -50,6 +101,12 @@ exports.sendForgotPasswordEmail = async (user, resetUrl) => {
 // 3. Appointment Booking Request Email
 exports.sendAppointmentRequestEmail = async (appointment) => {
   try {
+    const start = parseDateTime(appointment.date, appointment.time);
+    const end = new Date(start.getTime() + 30 * 60000);
+    const googleStart = formatIcsDate(start);
+    const googleEnd = formatIcsDate(end);
+    const googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Pending+Consultation+with+Dr.+${encodeURIComponent(appointment.doctor)}&dates=${googleStart}/${googleEnd}&details=Amar+Raho+Hospital+Consultation+appointment+for+${encodeURIComponent(appointment.name)}.+Reason:+${encodeURIComponent(appointment.problem)}&location=Online+Portal&sf=true&output=xml`;
+
     const html = `
       <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #ddd; border-radius: 8px;">
         <h3 style="color: #0d6efd; margin-top: 0;">Appointment Request Received 📅</h3>
@@ -57,12 +114,22 @@ exports.sendAppointmentRequestEmail = async (appointment) => {
         <p>We have received your appointment request for <b>Dr. ${appointment.doctor}</b>.</p>
         <p><b>Date:</b> ${appointment.date}<br><b>Time:</b> ${appointment.time}</p>
         <p>Your booking is currently pending review. We will notify you once the status is updated.</p>
+        
+        <div style="margin: 25px 0; text-align: center;">
+          <a href="${googleUrl}" target="_blank" style="background-color: #0d6efd; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">📅 Save Pending Event to Google Calendar</a>
+        </div>
       </div>
     `;
     await sendEmail({
       email: appointment.email,
       subject: 'Appointment Booking Request Received 📅',
-      html
+      html,
+      attachments: [
+        {
+          name: 'pending_appointment.ics',
+          content: generateIcsString(appointment)
+        }
+      ]
     });
   } catch (err) {
     console.error('Failed to send appointment request email:', err.message);
@@ -72,8 +139,18 @@ exports.sendAppointmentRequestEmail = async (appointment) => {
 // 4. Appointment Status Update Email
 exports.sendAppointmentStatusEmail = async (appointment, status) => {
   try {
-    const isConfirmed = status === 'Confirmed';
+    const isConfirmed = status === 'Approved' || status === 'Scheduled';
     const statusColor = isConfirmed ? '#198754' : '#dc3545';
+    
+    // Google Calendar template URL configuration
+    let googleUrl = '';
+    if (isConfirmed) {
+      const start = parseDateTime(appointment.date, appointment.time);
+      const end = new Date(start.getTime() + 30 * 60000); // 30 minutes
+      const googleStart = formatIcsDate(start);
+      const googleEnd = formatIcsDate(end);
+      googleUrl = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=Consultation+with+Dr.+${encodeURIComponent(appointment.doctor)}&dates=${googleStart}/${googleEnd}&details=Amar+Raho+Hospital+Consultation+appointment+for+${encodeURIComponent(appointment.name)}.+Reason:+${encodeURIComponent(appointment.problem)}&location=Online+Portal&sf=true&output=xml`;
+    }
     
     const html = `
       <div style="font-family: Arial, sans-serif; padding: 20px; color: #333; max-width: 600px; border: 1px solid #ddd; border-radius: 8px;">
@@ -82,14 +159,34 @@ exports.sendAppointmentStatusEmail = async (appointment, status) => {
         <p>Your appointment with <b>Dr. ${appointment.doctor}</b> has been updated to:</p>
         <h2 style="color: ${statusColor}; margin: 20px 0;">${status}</h2>
         <p><b>Date:</b> ${appointment.date}<br><b>Time:</b> ${appointment.time}</p>
-        <p>Log in to your hospital dashboard to view details.</p>
+        
+        ${isConfirmed ? `
+          <div style="margin: 25px 0; text-align: center;">
+            <a href="${googleUrl}" target="_blank" style="background-color: #0d6efd; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold; display: inline-block;">📅 Add to Google Calendar</a>
+          </div>
+          <p style="font-size: 13px; color: #666; text-align: center; margin-top: -10px;">Alternatively, double-click the <b>invite.ics</b> attachment at the bottom to add to Apple Calendar or Outlook.</p>
+        ` : ''}
+        
+        <p>Log in to your hospital dashboard to view details and join the consultation when active.</p>
       </div>
     `;
-    await sendEmail({
+
+    const mailOptions = {
       email: appointment.email,
       subject: `Appointment Status Updated: ${status} 📅`,
       html
-    });
+    };
+
+    if (isConfirmed) {
+      mailOptions.attachments = [
+        {
+          name: 'invite.ics',
+          content: generateIcsString(appointment)
+        }
+      ];
+    }
+
+    await sendEmail(mailOptions);
   } catch (err) {
     console.error('Failed to send appointment status update email:', err.message);
   }

@@ -1,14 +1,5 @@
 const axios = require('axios');
 
-/**
- * Sends email using Brevo's REST API (Port 443).
- * Bypasses all cloud port blocks (25/465/587).
- *
- * @param {Object} options - Email options
- * @param {string} options.email - Recipient email address
- * @param {string} options.subject - Email subject line
- * @param {string} options.html - Email body in HTML format
- */
 const sendEmail = async (options) => {
   let apiKey = process.env.BREVO_API_KEY;
 
@@ -44,6 +35,14 @@ const sendEmail = async (options) => {
     subject: options.subject,
     htmlContent: options.html
   };
+
+  // If attachments are passed, map them to Brevo format (base64 encoded)
+  if (options.attachments && options.attachments.length > 0) {
+    data.attachment = options.attachments.map(att => ({
+      name: att.name,
+      content: Buffer.from(att.content).toString('base64')
+    }));
+  }
 
   try {
     const response = await axios.post('https://api.brevo.com/v3/smtp/email', data, {
