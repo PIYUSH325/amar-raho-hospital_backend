@@ -15,8 +15,9 @@ const DietPlanSchema = new mongoose.Schema({
   wednesday: { type: MealSchema, default: () => ({}) },
   thursday: { type: MealSchema, default: () => ({}) },
   friday: { type: MealSchema, default: () => ({}) },
-  saturday: { type: MealSchema, default: () => ({}) },
   sunday: { type: MealSchema, default: () => ({}) },
+  startDate: { type: String, default: '' },
+  endDate: { type: String, default: '' },
   updatedAt: { type: Date, default: Date.now }
 });
 

@@ -6,7 +6,7 @@ const DietCompliance = require('../models/DietCompliance');
 // @access  Private (Doctor/Admin)
 exports.upsertDietPlan = async (req, res, next) => {
   try {
-    const { patientId, monday, tuesday, wednesday, thursday, friday, saturday, sunday } = req.body;
+    const { patientId, startDate, endDate, monday, tuesday, wednesday, thursday, friday, saturday, sunday } = req.body;
 
     if (!patientId) {
       return res.status(400).json({ success: false, message: 'Patient ID is required' });
@@ -22,6 +22,8 @@ exports.upsertDietPlan = async (req, res, next) => {
       {
         patient: patientId,
         doctor: req.user.id,
+        startDate,
+        endDate,
         monday,
         tuesday,
         wednesday,
