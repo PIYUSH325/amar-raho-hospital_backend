@@ -34,6 +34,10 @@ const DoctorSchema = new mongoose.Schema({
     type: String,
     default: 'General'
   },
+  isPresenceActive: {
+    type: Boolean,
+    default: true
+  },
   createdAt: {
     type: Date,
     default: Date.now

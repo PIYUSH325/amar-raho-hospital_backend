@@ -239,3 +239,57 @@ exports.sendMissedTaskEmail = async (patientEmail, patientName, task) => {
     console.error('Failed to send missed task email:', err.message);
   }
 };
+
+// 7. Doctor Unavailability Alerts
+exports.sendDoctorUnavailabilityAlerts = async (doctorId) => {
+  try {
+    const Appointment = require('../models/Appointment');
+    const User = require('../models/User');
+
+    // 1. Get doctor profile details
+    const doctorObj = await User.findById(doctorId);
+    const doctorName = doctorObj?.name || 'your doctor';
+
+    // 2. Get today's local date bounds formatted as string: YYYY-MM-DD
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+
+    // 3. Find today's approved/scheduled appointments for this doctor
+    const appointments = await Appointment.find({
+      doctorRef: doctorId,
+      status: { $in: ['Scheduled', 'Approved'] },
+      date: todayStr
+    });
+
+    // 4. Loop and send email to each patient
+    for (const appt of appointments) {
+      const patientEmail = appt.email;
+      const patientName = appt.name || 'Valued Patient';
+      
+      if (!patientEmail) continue;
+
+      const emailSubject = `🚨 Appointment Update: Dr. ${doctorName} is unavailable today`;
+      const emailHtml = `
+        <div style="font-family: Arial, sans-serif; padding: 20px; line-height: 1.6; max-width: 600px; border: 1px solid #eee; border-radius: 8px;">
+          <h2 style="color: #dc3545; margin-top: 0;">Important Appointment Notice</h2>
+          <p>Dear <strong>${patientName}</strong>,</p>
+          <p>We are writing to inform you that <strong>Dr. ${doctorName}</strong> is temporarily unavailable for their sessions today.</p>
+          <p>Since you have a scheduled appointment today at <strong>${appt.time}</strong>, we request you to contact the hospital reception immediately to reschedule your booking.</p>
+          <div style="background-color: #f8d7da; color: #721c24; padding: 15px; border-radius: 5px; margin: 15px 0;">
+            <strong>Hospital Reschedule Support:</strong><br/>
+            📧 Email Support: support@amar-raho-hospital.com
+          </div>
+          <p style="margin-top: 20px; font-size: 12px; color: #6c757d;">We apologize sincerely for any inconvenience this may cause you and appreciate your understanding.</p>
+        </div>
+      `;
+
+      await sendEmail({
+        email: patientEmail,
+        subject: emailSubject,
+        htmlContent: emailHtml
+      });
+    }
+  } catch (err) {
+    console.error('Failed to send doctor unavailability alerts:', err.message);
+  }
+};

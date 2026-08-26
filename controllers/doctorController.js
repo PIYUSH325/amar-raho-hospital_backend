@@ -74,3 +74,36 @@ exports.getNotifications = async (req, res, next) => {
     next(error);
   }
 };
+
+// @desc    Toggle doctor presence status (Active/Away)
+// @route   PUT /api/doctors/presence
+// @access  Private (Doctor)
+exports.togglePresenceStatus = async (req, res, next) => {
+  try {
+    const { isPresenceActive } = req.body;
+    const { sendDoctorUnavailabilityAlerts } = require('../services/notificationService');
+
+    let doctor = await Doctor.findOne({ user: req.user.id });
+    if (!doctor) {
+      doctor = await Doctor.create({ user: req.user.id });
+    }
+
+    doctor = await Doctor.findOneAndUpdate(
+      { user: req.user.id },
+      { $set: { isPresenceActive } },
+      { new: true }
+    );
+
+    if (!isPresenceActive) {
+      sendDoctorUnavailabilityAlerts(req.user.id);
+    }
+
+    res.json({
+      success: true,
+      message: `Presence status updated to ${isPresenceActive ? 'Active' : 'Away'}`,
+      data: doctor
+    });
+  } catch (error) {
+    next(error);
+  }
+};
