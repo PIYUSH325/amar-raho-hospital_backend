@@ -286,7 +286,7 @@ exports.sendDoctorUnavailabilityAlerts = async (doctorId) => {
       await sendEmail({
         email: patientEmail,
         subject: emailSubject,
-        htmlContent: emailHtml
+        html: emailHtml
       });
     }
   } catch (err) {
