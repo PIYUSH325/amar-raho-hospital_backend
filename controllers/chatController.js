@@ -1,5 +1,48 @@
 const Message = require('../models/Message');
 const axios = require('axios');
+const path = require('path');
+
+exports.uploadChatMedia = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'No file uploaded' });
+    }
+
+    const ext = path.extname(req.file.originalname).toLowerCase();
+    const mimetype = req.file.mimetype;
+
+    let fileType = 'document';
+    if (mimetype.startsWith('image/') || ['.png', '.jpg', '.jpeg', '.gif', '.webp', '.svg'].includes(ext)) {
+      fileType = 'image';
+    } else if (mimetype.startsWith('audio/') || ['.webm', '.mp3', '.wav', '.ogg', '.m4a', '.aac'].includes(ext)) {
+      fileType = 'audio';
+    } else if (mimetype.startsWith('video/') || ['.mp4', '.mov', '.avi', '.mkv'].includes(ext)) {
+      fileType = 'video';
+    }
+
+    // Format file size nicely
+    const bytes = req.file.size;
+    let fileSizeStr = '';
+    if (bytes < 1024) fileSizeStr = `${bytes} B`;
+    else if (bytes < 1024 * 1024) fileSizeStr = `${(bytes / 1024).toFixed(1)} KB`;
+    else fileSizeStr = `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+
+    const fileUrl = `/uploads/chat_media/${req.file.filename}`;
+
+    res.json({
+      success: true,
+      data: {
+        fileUrl,
+        fileName: req.file.originalname,
+        fileType,
+        fileSize: fileSizeStr,
+        mimetype: req.file.mimetype
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
 
 exports.getChatHistory = async (req, res, next) => {
   try {

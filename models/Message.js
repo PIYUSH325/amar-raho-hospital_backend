@@ -8,7 +8,16 @@ const messageSchema = new mongoose.Schema({
   patient: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   doctor: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
   
-  text: { type: String, required: true },
+  text: { type: String, default: '' },
+  messageType: { 
+    type: String, 
+    enum: ['text', 'image', 'document', 'audio', 'video'], 
+    default: 'text' 
+  },
+  fileUrl: { type: String, default: null },
+  fileName: { type: String, default: null },
+  fileSize: { type: String, default: null },
+  duration: { type: Number, default: null }, // Duration in seconds for audio
   createdAt: { type: Date, default: Date.now }
 });
 

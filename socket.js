@@ -26,8 +26,21 @@ const initSocket = (server) => {
 
     // 2. Real-time Message Send
     socket.on('send_message', async (messageData) => {
-      const { roomId, senderId, recipientId, patientId, doctorId, text, senderName } = messageData;
-      console.log(`✉️ Received send_message event for Room ID: ${roomId} from sender: ${senderId}`);
+      const { 
+        roomId, 
+        senderId, 
+        recipientId, 
+        patientId, 
+        doctorId, 
+        text, 
+        senderName,
+        messageType,
+        fileUrl,
+        fileName,
+        fileSize,
+        duration
+      } = messageData;
+      console.log(`✉️ Received send_message event (${messageType || 'text'}) for Room ID: ${roomId} from sender: ${senderId}`);
 
       try {
         const savedMsg = await Message.create({
@@ -35,7 +48,12 @@ const initSocket = (server) => {
           recipient: recipientId,
           patient: patientId,
           doctor: doctorId,
-          text
+          text: text || '',
+          messageType: messageType || 'text',
+          fileUrl: fileUrl || null,
+          fileName: fileName || null,
+          fileSize: fileSize || null,
+          duration: duration || null
         });
         console.log("💾 Message saved in MongoDB successfully. Message ID:", savedMsg._id);
 
@@ -43,9 +61,24 @@ const initSocket = (server) => {
         io.to(roomId).emit('receive_message', savedMsg);
         console.log(`📢 Broadcasted receive_message to room: ${roomId}`);
 
+        // Format user-friendly preview for notification
+        let notifText = text;
+        if (messageType === 'audio') {
+          notifText = duration ? `🎤 Voice message (${duration}s)` : '🎤 Voice message';
+        } else if (messageType === 'image') {
+          notifText = text ? `📷 Photo: ${text}` : '📷 Photo';
+        } else if (messageType === 'document') {
+          notifText = `📄 Document: ${fileName || 'Attachment'}`;
+        } else if (messageType === 'video') {
+          notifText = text ? `🎥 Video: ${text}` : '🎥 Video';
+        }
+
         // Broadcast notification to recipient's personal user room
         io.to(`user_${recipientId}`).emit('receive_message_notification', {
-          msg: savedMsg,
+          msg: {
+            ...savedMsg.toObject(),
+            text: notifText || 'New message'
+          },
           senderName: senderName || 'Someone'
         });
         console.log(`🔔 Emitted notification alert to user room: user_${recipientId}`);
