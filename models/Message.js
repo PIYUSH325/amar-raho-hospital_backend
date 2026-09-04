@@ -21,5 +21,11 @@ const messageSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// Dual-Write Sync to PostgreSQL
+const dualWrite = require('../services/dualWrite');
+messageSchema.post('save', function(doc) {
+  dualWrite.syncMessage(doc);
+});
+
 module.exports = mongoose.model('Message', messageSchema);
 

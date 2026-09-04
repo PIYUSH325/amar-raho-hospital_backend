@@ -41,4 +41,10 @@ UserSchema.methods.getResetPasswordToken = function() {
   return resetToken;
 };
 
+// Dual-Write Sync to PostgreSQL
+const dualWrite = require('../services/dualWrite');
+UserSchema.post('save', function(doc) {
+  dualWrite.syncUser(doc);
+});
+
 module.exports = mongoose.model('User', UserSchema);

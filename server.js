@@ -24,3 +24,10 @@ const PORT = process.env.PORT || 5001;
 server.listen(PORT, () => {
   console.log(`Server running in ${process.env.NODE_ENV || 'development'} mode on port ${PORT}`);
 });
+
+const prisma = require('./config/prisma');
+
+// Connect to PostgreSQL (Prisma)
+prisma.$connect()
+  .then(() => console.log('🐘 PostgreSQL Connected: localhost:5432 (amar_raho_hospital)'))
+  .catch((err) => console.error('❌ PostgreSQL connection error:', err.message));

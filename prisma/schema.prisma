@@ -1,0 +1,126 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                  String           @id @default(uuid())
+  name                String
+  email               String           @unique
+  password            String
+  role                String           @default("patient") // 'patient', 'doctor', 'admin'
+  createdAt           DateTime         @default(now())
+
+  // Relations
+  patientAppointments Appointment[]    @relation("PatientAppointments")
+  doctorAppointments  Appointment[]    @relation("DoctorAppointments")
+  sentMessages        Message[]        @relation("SentMessages")
+  prescriptions       Prescription[]
+  medicalRecords      MedicalRecord[]
+  doctorProfile       DoctorProfile?
+  patientProfile      PatientProfile?
+}
+
+model DoctorProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  specialization   String   @default("General Physician")
+  experience       Int      @default(1)
+  fees             Float    @default(500)
+  bio              String?  @default("")
+  department       String   @default("General")
+  isPresenceActive Boolean  @default(true)
+  isVerified       Boolean  @default(false)
+  createdAt        DateTime @default(now())
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model PatientProfile {
+  id               String   @id @default(uuid())
+  userId           String   @unique
+  mobile           String?  @default("")
+  age              Int?
+  gender           String?  @default("")
+  bloodGroup       String?  @default("")
+  emergencyContact String?  @default("")
+  address          String?  @default("")
+  reports          Json?    @default("[]")
+  dietPlan         Json?    @default("[]")
+  createdAt        DateTime @default(now())
+
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model Appointment {
+  id        String   @id @default(uuid())
+  name      String?
+  email     String?
+  mobile    String?
+  doctor    String?  // Doctor name string
+  date      String
+  time      String
+  problem   String
+  status    String   @default("Scheduled") // 'Scheduled', 'Approved', 'Completed', 'Cancelled'
+  createdAt DateTime @default(now())
+
+  // Foreign keys
+  patientId String
+  patient   User     @relation("PatientAppointments", fields: [patientId], references: [id], onDelete: Cascade)
+
+  doctorId  String?
+  doctorUser User?   @relation("DoctorAppointments", fields: [doctorId], references: [id], onDelete: SetNull)
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  text        String?  @default("")
+  messageType String   @default("text") // 'text', 'image', 'document', 'audio', 'video'
+  fileUrl     String?
+  fileName    String?
+  fileSize    String?
+  duration    Int?
+  createdAt   DateTime @default(now())
+
+  senderId    String
+  sender      User     @relation("SentMessages", fields: [senderId], references: [id], onDelete: Cascade)
+
+  recipientId String?
+  patientId   String?
+  doctorId    String?
+}
+
+model Prescription {
+  id           String   @id @default(uuid())
+  medicines    Json     // Array of medicine objects
+  instructions String?
+  createdAt    DateTime @default(now())
+
+  patientId    String
+  patient      User     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model MedicalRecord {
+  id            String   @id @default(uuid())
+  diagnosis     String
+  treatmentPlan String
+  notes         String?
+  visitDate     String?
+  createdAt     DateTime @default(now())
+
+  patientId     String
+  patient       User     @relation(fields: [patientId], references: [id], onDelete: Cascade)
+}
+
+model Contact {
+  id        String   @id @default(uuid())
+  name      String
+  email     String
+  subject   String
+  message   String
+  createdAt DateTime @default(now())
+}

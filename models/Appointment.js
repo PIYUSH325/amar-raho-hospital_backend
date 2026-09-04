@@ -25,4 +25,10 @@ const AppointmentSchema = new mongoose.Schema({
   createdAt: { type: Date, default: Date.now }
 });
 
+// Dual-Write Sync to PostgreSQL
+const dualWrite = require('../services/dualWrite');
+AppointmentSchema.post('save', function(doc) {
+  dualWrite.syncAppointment(doc);
+});
+
 module.exports = mongoose.model('Appointment', AppointmentSchema);

@@ -28,4 +28,10 @@ const PrescriptionSchema = new mongoose.Schema({
   versionKey: false 
 });
 
+// Dual-Write Sync to PostgreSQL
+const dualWrite = require('../services/dualWrite');
+PrescriptionSchema.post('save', function(doc) {
+  dualWrite.syncPrescription(doc);
+});
+
 module.exports = mongoose.model('Prescription', PrescriptionSchema);

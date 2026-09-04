@@ -44,4 +44,10 @@ const DoctorSchema = new mongoose.Schema({
   }
 });
 
+// Dual-Write Sync to PostgreSQL
+const dualWrite = require('../services/dualWrite');
+DoctorSchema.post('save', function(doc) {
+  dualWrite.syncDoctor(doc);
+});
+
 module.exports = mongoose.model('Doctor', DoctorSchema);
