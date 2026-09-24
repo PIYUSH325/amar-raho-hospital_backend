@@ -16,17 +16,18 @@ Klinik is a full-featured hospital management, telemedicine, and AI-assisted hea
 🔒 Security
 📄 License
 🚀 1. Features
-Feature	Description
-🔐 Authentication & RBAC	JWT authentication with patient, doctor, and admin roles
-📅 Appointment Scheduling	Booking, approval, cancellation, completion and notifications
-👨‍⚕️ Doctor Profiles	Specialization, fees, availability and consultation presence
-👤 Patient Profiles	Medical history and health information
-📝 Medical Records	Diagnoses, prescriptions, treatment plans and dietary information
-💬 Real-Time Chat	Socket.IO messaging with file/media sharing
-📹 Telemedicine	WebRTC / Agora / Twilio-based video consultation
-🤖 AI Health Assistant	Google Gemini-powered conversational healthcare assistant
-🧠 RAG	Semantic search over hospital policies and knowledge base
-📄 Medical Report Analysis	OCR using Tesseract.js and PDF extraction using pdf-parse
+| Feature | Description |
+|---|---|
+| 🔐 Authentication & RBAC | JWT authentication with patient, doctor, and admin roles |
+| 📅 Appointment Scheduling | Booking, approval, cancellation, completion and notifications |
+| 👨‍⚕️ Doctor Profiles | Specialization, fees, availability and consultation presence |
+| 👤 Patient Profiles | Medical history and health information |
+| 📝 Medical Records | Diagnoses, prescriptions, treatment plans and dietary information |
+| 💬 Real-Time Chat | Socket.IO messaging with file/media sharing |
+| 📹 Telemedicine | WebRTC / Agora / Twilio-based video consultation |
+| 🤖 AI Health Assistant | Google Gemini-powered conversational healthcare assistant |
+| 🧠 RAG | Semantic search over hospital policies and knowledge base |
+| 📄 Medical Report Analysis | OCR using Tesseract.js and PDF extraction using pdf-parse |
 
 The AI agent supports ReAct tool calling for doctor recommendations, appointment queries, and symptom triage.
 
@@ -38,9 +39,10 @@ Authentication: JWT + bcrypt
 API: REST API
 Real-Time: Socket.IO
 Databases
-Database	Technology	Purpose
-🐘 PostgreSQL	Prisma ORM	Users, appointments, doctors, patients, prescriptions, policies
-🍃 MongoDB	Mongoose	Chat messages, logs and document archives
+| Database | Technology | Purpose |
+|---|---|---|
+| 🐘 PostgreSQL | Prisma ORM | Users, appointments, doctors, patients, prescriptions, policies |
+| 🍃 MongoDB | Mongoose | Chat messages, logs and document archives |
 AI
 Google Gemini API
 Vector embeddings
@@ -85,17 +87,18 @@ backend/
 ├── package.json
 └── .env.example
 📂 Important folders
-Folder	Responsibility
-ai/	Gemini, RAG, embeddings and AI tools
-config/	Database configuration
-controllers/	Request/response business logic
-middleware/	Authentication, roles, uploads and errors
-models/	Mongoose schemas
-prisma/	PostgreSQL schema and migrations
-routes/	Express API routes
-scripts/	Database synchronization scripts
-uploads/	Reports and media
-utils/	Email, tokens and helper functions
+| Folder | Responsibility |
+|---|---|
+| `ai/` | Gemini, RAG, embeddings and AI tools |
+| `config/` | Database configuration |
+| `controllers/` | Request/response business logic |
+| `middleware/` | Authentication, roles, uploads and errors |
+| `models/` | Mongoose schemas |
+| `prisma/` | PostgreSQL schema and migrations |
+| `routes/` | Express API routes |
+| `scripts/` | Database synchronization scripts |
+| `uploads/` | Reports and media |
+| `utils/` | Email, tokens and helper functions |
 
 This structure is documented in the project README.
 
@@ -192,39 +195,43 @@ These commands are specified in the project's database management section.
 
 Base URL: /api/auth
 
-Method	Endpoint	Access	Purpose
-POST	/register	Public	Register patient/doctor
-POST	/login	Public	Login
-GET	/me	Authenticated	Current user
-POST	/forgotpassword	Public	Password reset request
-PUT	/resetpassword/:token	Public	Reset password
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| `POST` | `/register` | Public | Register patient/doctor |
+| `POST` | `/login` | Public | Login |
+| `GET` | `/me` | Authenticated | Current user |
+| `POST` | `/forgotpassword` | Public | Password reset request |
+| `PUT` | `/resetpassword/:token` | Public | Reset password |
 📅 Appointments
 
 Base URL: /api/appointments
 
-Method	Endpoint	Access	Purpose
-POST	/	Patient	Book appointment
-GET	/my	Patient / Doctor	Get appointments
-PUT	/:id/cancel	Patient / Doctor / Admin	Cancel appointment
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| `POST` | `/` | Patient | Book appointment |
+| `GET` | `/my` | Patient / Doctor | Get appointments |
+| `PUT` | `/:id/cancel` | Patient / Doctor / Admin | Cancel appointment |
 👨‍⚕️ Doctors
 
 Base URL: /api/doctors
 
-Method	Endpoint	Access	Purpose
-GET	/	Public	List doctors
-GET	/me	Doctor / Admin	Doctor profile
-POST	/profile	Doctor	Update profile
-PUT	/presence	Doctor	Toggle availability
-GET	/notifications	Doctor	Get notifications
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| `GET` | `/` | Public | List doctors |
+| `GET` | `/me` | Doctor / Admin | Doctor profile |
+| `POST` | `/profile` | Doctor | Update profile |
+| `PUT` | `/presence` | Doctor | Toggle availability |
+| `GET` | `/notifications` | Doctor | Get notifications |
 🏥 Patients
 
 Base URL: /api/patients
 
-Method	Endpoint	Access	Purpose
-GET	/me	Patient / Admin	Patient health profile
-POST	/upload-report	Patient	Upload medical report
-POST	/chat-ai	Patient	AI health chat
-PUT	/todo/toggle	Patient	Toggle medical task
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| `GET` | `/me` | Patient / Admin | Patient health profile |
+| `POST` | `/upload-report` | Patient | Upload medical report |
+| `POST` | `/chat-ai` | Patient | AI health chat |
+| `PUT` | `/todo/toggle` | Patient | Toggle medical task |
 🤖 9. AI Engine
 
 The AI system contains several major components:
@@ -304,24 +311,26 @@ The README specifically describes policy RAG and medical OCR as core AI capabili
 
 Base URLs: /api/ai and /api/public
 
-Method	Endpoint	Access	Purpose
-POST	/api/public/hospital-chat	Public	Hospital chatbot
-POST	/api/ai/chat	Public / Auth	ReAct AI agent
-POST	/api/ai/intent	Public	Intent classification
-POST	/api/ai/rag-search	Public	Policy semantic search
-GET	/api/ai/policies	Public	Published policies
-GET	/api/ai/settings	Public	AI configuration
+| Method | Endpoint | Access | Purpose |
+|---|---|---|---|
+| `POST` | `/api/public/hospital-chat` | Public | Hospital chatbot |
+| `POST` | `/api/ai/chat` | Public / Auth | ReAct AI agent |
+| `POST` | `/api/ai/intent` | Public | Intent classification |
+| `POST` | `/api/ai/rag-search` | Public | Policy semantic search |
+| `GET` | `/api/ai/policies` | Public | Published policies |
+| `GET` | `/api/ai/settings` | Public | AI configuration |
 
 💬 10. Real-Time Chat
 
 The application uses Socket.IO for real-time communication.
 
-Event	Direction	Purpose
-join_room	Client → Server	Join consultation room
-register	Client → Server	Register notification room
-send_message	Client → Server	Send message
-receive_message	Server → Client	Receive message
-user_typing	Client → Server	Typing indicator
+| Event | Direction | Purpose |
+|---|---|---|
+| `join_room` | Client → Server | Join consultation room |
+| `register` | Client → Server | Register notification room |
+| `send_message` | Client → Server | Send message |
+| `receive_message` | Server → Client | Receive message |
+| `user_typing` | Client → Server | Typing indicator |
 
 Example:
 
@@ -361,23 +370,25 @@ GET  /api/prescriptions
 Medical Records
 POST /api/medical-records
 GET  /api/medical-records
-Feature	Access
-Create prescription	Doctor
-View prescriptions	Patient / Doctor / Admin
-Create medical record	Doctor
-View medical records	Patient / Doctor / Admin
+| Feature | Access |
+|---|---|
+| Create prescription | Doctor |
+| View prescriptions | Patient / Doctor / Admin |
+| Create medical record | Doctor |
+| View medical records | Patient / Doctor / Admin |
 
 🛠️ 12. Admin Console
 
 Base URL: /api/admin
 
-Method	Endpoint	Purpose
-GET	/stats	System statistics
-GET	/doctors	Registered doctors
-PUT	/doctors/:id/verify	Verify doctor
-GET	/policies	Manage policy PDFs
-POST	/policies	Upload policy + generate RAG chunks
-PUT	/ai-settings	Configure AI instructions
+| Method | Endpoint | Purpose |
+|---|---|---|
+| `GET` | `/stats` | System statistics |
+| `GET` | `/doctors` | Registered doctors |
+| `PUT` | `/doctors/:id/verify` | Verify doctor |
+| `GET` | `/policies` | Manage policy PDFs |
+| `POST` | `/policies` | Upload policy + generate RAG chunks |
+| `PUT` | `/ai-settings` | Configure AI instructions |
 
 🔒 13. Security
 
@@ -437,9 +448,8 @@ The README explicitly identifies .env, environment files, node_modules, and sens
                             └─────────┬─────────┘
                                       ↓
                               Hospital Platform
-======================================================================================================================================================================================================================================================================================================================================
-LICENSE
-MIT License
+=## 📄 License
+
 MIT License
 
 Copyright (c) 2026 Klinik
