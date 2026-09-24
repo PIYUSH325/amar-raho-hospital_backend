@@ -1,36 +1,42 @@
 const Appointment = require('../models/Appointment');
 const notificationService = require('../services/notificationService');
+const appointmentService = require('../services/appointmentService');
 
 // @desc    Book a new appointment
 // @route   POST /api/appointments
 // @access  Private
 exports.bookAppointment = async (req, res, next) => {
   try {
-    const { name, email, mobile, doctor, date, time, problem, doctorRef } = req.body;
+    const { name, email, mobile, doctor, date, time, problem, notes, doctorRef } = req.body;
 
-    if (!name || !email || !mobile || !doctor || !date || !time || !problem) {
-      return res.status(400).json({ success: false, message: 'All fields are required' });
+    if (!doctor || !date || !time) {
+      return res.status(400).json({ success: false, message: 'Doctor, date, and time are required' });
     }
 
-    const appointment = await Appointment.create({
-      user: req.user.id,
-      doctorRef,
-      name,
-      email,
-      mobile,
-      doctor,
-      date,
-      time,
-      problem
+    const result = await appointmentService.bookAppointment({
+      doctorId: doctorRef,
+      doctorName: doctor,
+      appointmentDate: date,
+      appointmentTime: time,
+      reason: problem || 'General Consultation',
+      notes: notes || '',
+      authenticatedUser: req.user
     });
 
-    // Send Appointment Confirmation Request Email (Non-blocking)
-    notificationService.sendAppointmentRequestEmail(appointment);
+    if (!result.success) {
+      return res.status(result.requiresAuth ? 401 : 400).json({
+        success: false,
+        message: result.error,
+        availableAlternatives: result.availableAlternatives
+      });
+    }
 
     res.status(201).json({
       success: true,
       message: 'Appointment booked successfully',
-      data: appointment
+      data: result.data,
+      appointmentId: result.appointmentId,
+      emailStatus: result.emailStatus
     });
   } catch (error) {
     next(error);

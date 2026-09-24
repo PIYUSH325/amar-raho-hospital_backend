@@ -244,3 +244,62 @@ exports.syncMedicalRecord = async (recDoc) => {
     console.warn('⚠️ [DualWrite] syncMedicalRecord warning:', err.message);
   }
 };
+
+exports.syncHospitalPolicy = async (policyDoc) => {
+  if (!policyDoc || !policyDoc._id) return;
+  try {
+    const id = policyDoc._id.toString();
+    const chunks = policyDoc.chunks || [];
+
+    await prisma.hospitalPolicy.upsert({
+      where: { id },
+      update: {
+        title: policyDoc.title || 'Hospital Policy',
+        category: policyDoc.category || 'General',
+        fileName: policyDoc.fileName || '',
+        fileUrl: policyDoc.fileUrl || '',
+        fileSize: Number(policyDoc.fileSize) || 0,
+        extractedText: policyDoc.extractedText || '',
+      },
+      create: {
+        id,
+        title: policyDoc.title || 'Hospital Policy',
+        category: policyDoc.category || 'General',
+        fileName: policyDoc.fileName || '',
+        fileUrl: policyDoc.fileUrl || '',
+        fileSize: Number(policyDoc.fileSize) || 0,
+        extractedText: policyDoc.extractedText || '',
+        createdAt: policyDoc.createdAt ? new Date(policyDoc.createdAt) : new Date(),
+      },
+    });
+
+    // Replace chunks in PostgreSQL for this policy
+    await prisma.policyChunk.deleteMany({ where: { policyId: id } });
+
+    if (chunks.length > 0) {
+      await prisma.policyChunk.createMany({
+        data: chunks.map((c, idx) => ({
+          policyId: id,
+          chunkIndex: c.chunkIndex !== undefined ? c.chunkIndex : idx,
+          text: c.text || '',
+          embedding: c.embedding || [],
+        })),
+      });
+    }
+    console.log(`✅ [DualWrite] Synced policy '${policyDoc.title}' (${chunks.length} chunks) to PostgreSQL.`);
+  } catch (err) {
+    console.warn('⚠️ [DualWrite] syncHospitalPolicy warning:', err.message);
+  }
+};
+
+exports.deleteHospitalPolicy = async (policyId) => {
+  if (!policyId) return;
+  try {
+    const id = policyId.toString();
+    await prisma.hospitalPolicy.deleteMany({ where: { id } });
+    console.log(`✅ [DualWrite] Deleted policy '${id}' from PostgreSQL.`);
+  } catch (err) {
+    console.warn('⚠️ [DualWrite] deleteHospitalPolicy warning:', err.message);
+  }
+};
+

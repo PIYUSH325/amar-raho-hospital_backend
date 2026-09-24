@@ -5,8 +5,37 @@ const Doctor = require('../models/Doctor');
 const Patient = require('../models/Patient');
 const Hospital = require('../models/Hospital');
 const Department = require('../models/Department');
+const HospitalPolicy = require('../models/HospitalPolicy');
+const AiSettings = require('../models/AiSettings');
 const bcrypt = require('bcryptjs');
 const notificationService = require('../services/notificationService');
+const pdfModule = require('pdf-parse');
+const fs = require('fs');
+const path = require('path');
+const { splitTextIntoChunks } = require('../ai/rag/documentLoader');
+
+async function extractTextFromPdfBuffer(buffer) {
+  if (typeof pdfModule === 'function') {
+    const res = await pdfModule(buffer);
+    return res.text || '';
+  } else if (pdfModule.PDFParse) {
+    const parser = new pdfModule.PDFParse({ data: buffer });
+    try {
+      const res = await parser.getText();
+      return (typeof res === 'object' && res.text) ? res.text : (typeof res === 'string' ? res : '');
+    } finally {
+      if (typeof parser.destroy === 'function') {
+        try { await parser.destroy(); } catch (_) {}
+      }
+    }
+  } else if (typeof pdfModule.default === 'function') {
+    const res = await pdfModule.default(buffer);
+    return res.text || '';
+  }
+  throw new Error('Unsupported PDF parse module format');
+}
+const { generateEmbedding } = require('../ai/embeddings/embeddingService');
+const dualWrite = require('../services/dualWrite');
 
 // @desc    Get dashboard statistics
 // @route   GET /api/admin/stats
@@ -18,6 +47,7 @@ exports.getStats = async (req, res, next) => {
     const totalContacts = await Contact.countDocuments();
     const totalHospitals = await Hospital.countDocuments();
     const totalDepartments = await Department.countDocuments();
+    const totalPolicies = await HospitalPolicy.countDocuments();
 
     res.json({
       success: true,
@@ -27,7 +57,8 @@ exports.getStats = async (req, res, next) => {
         totalAppointments,
         totalContacts,
         totalHospitals,
-        totalDepartments
+        totalDepartments,
+        totalPolicies
       }
     });
   } catch (error) {
@@ -339,8 +370,18 @@ exports.getDepartments = async (req, res, next) => {
 
 exports.createDepartment = async (req, res, next) => {
   try {
-    const { name, description } = req.body;
-    const dept = await Department.create({ name, description });
+    const { name, description, facilities } = req.body;
+    let formattedFacilities = [];
+    if (Array.isArray(facilities)) {
+      formattedFacilities = facilities;
+    } else if (typeof facilities === 'string' && facilities.trim()) {
+      formattedFacilities = facilities.split(',').map(s => s.trim()).filter(Boolean);
+    }
+    const dept = await Department.create({
+      name,
+      description,
+      facilities: formattedFacilities
+    });
     res.status(201).json({ success: true, message: 'Department registered', data: dept });
   } catch (error) {
     next(error);
@@ -355,3 +396,245 @@ exports.deleteDepartment = async (req, res, next) => {
     next(error);
   }
 };
+
+// ==========================================
+// HOSPITAL POLICIES (RAG VECTOR STORE)
+// ==========================================
+
+// @desc    Upload Hospital Policy PDF, extract text, generate vectors, save to MongoDB & PostgreSQL
+// @route   POST /api/admin/policies
+exports.uploadPolicyPdf = async (req, res, next) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ success: false, message: 'Please upload a PDF file.' });
+    }
+
+    const { title, category } = req.body;
+    if (!title || !title.trim()) {
+      return res.status(400).json({ success: false, message: 'Policy title is required.' });
+    }
+
+    const filePath = req.file.path;
+    const dataBuffer = fs.readFileSync(filePath);
+
+    // 1. Extract text from PDF buffer
+    const rawText = await extractTextFromPdfBuffer(dataBuffer);
+    const cleanText = (rawText || '').replace(/\r\n|\r/g, '\n').trim();
+
+    if (!cleanText) {
+      return res.status(400).json({ 
+        success: false, 
+        message: 'Could not extract readable text from this PDF. Please ensure the PDF contains selectable text, not only flattened images.' 
+      });
+    }
+
+    // 2. Split text into semantic chunks for vector embedding
+    const textChunks = splitTextIntoChunks(cleanText, 400, 50);
+
+    // 3. Generate real vector embeddings for each chunk via Gemini
+    const chunksWithEmbeddings = [];
+    for (let i = 0; i < textChunks.length; i++) {
+      const chunkText = textChunks[i];
+      if (chunkText && chunkText.trim()) {
+        const embedding = await generateEmbedding(chunkText);
+        chunksWithEmbeddings.push({
+          chunkIndex: i,
+          text: chunkText,
+          embedding: embedding
+        });
+      }
+    }
+
+    // 4. Save to MongoDB (which automatically triggers dual-write to PostgreSQL)
+    const policy = await HospitalPolicy.create({
+      title: title.trim(),
+      category: category || 'General',
+      fileName: req.file.filename,
+      fileUrl: `/uploads/${req.file.filename}`,
+      fileSize: req.file.size,
+      extractedText: cleanText,
+      chunks: chunksWithEmbeddings
+    });
+
+    res.status(201).json({
+      success: true,
+      message: `Policy '${policy.title}' uploaded and synchronized to MongoDB & PostgreSQL with ${chunksWithEmbeddings.length} vector chunks!`,
+      data: {
+        id: policy._id,
+        title: policy.title,
+        category: policy.category,
+        totalChunks: chunksWithEmbeddings.length
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get all uploaded hospital policies for public visitors
+// @route   GET /api/ai/policies
+exports.getPublicPolicies = async (req, res, next) => {
+  try {
+    const policies = await HospitalPolicy.find()
+      .select('-chunks.embedding')
+      .sort({ createdAt: -1 });
+
+    const formatted = policies.map(p => ({
+      _id: p._id,
+      title: p.title,
+      category: p.category,
+      fileName: p.fileName,
+      fileUrl: p.fileUrl,
+      fileSize: p.fileSize,
+      extractedText: p.extractedText || '',
+      createdAt: p.createdAt
+    }));
+
+    res.json({ success: true, count: formatted.length, data: formatted });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get all uploaded hospital policies (Admin view)
+// @route   GET /api/admin/policies
+exports.getPolicies = async (req, res, next) => {
+  try {
+    const policies = await HospitalPolicy.find()
+      .select('-chunks.embedding -extractedText')
+      .sort({ createdAt: -1 });
+
+    const formatted = policies.map(p => ({
+      _id: p._id,
+      title: p.title,
+      category: p.category,
+      fileName: p.fileName,
+      fileUrl: p.fileUrl,
+      fileSize: p.fileSize,
+      totalChunks: p.chunks ? p.chunks.length : 0,
+      createdAt: p.createdAt
+    }));
+
+    res.json({ success: true, count: formatted.length, data: formatted });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Delete a policy from both MongoDB and PostgreSQL
+// @route   DELETE /api/admin/policies/:id
+exports.deletePolicy = async (req, res, next) => {
+  try {
+    const policy = await HospitalPolicy.findById(req.params.id);
+    if (!policy) {
+      return res.status(404).json({ success: false, message: 'Policy not found' });
+    }
+
+    // Delete physical file from uploads folder
+    const fullFilePath = path.join(__dirname, '../uploads', policy.fileName);
+    if (fs.existsSync(fullFilePath)) {
+      try { fs.unlinkSync(fullFilePath); } catch (e) {}
+    }
+
+    // Delete from MongoDB
+    await HospitalPolicy.findByIdAndDelete(req.params.id);
+
+    // Delete from PostgreSQL
+    await dualWrite.deleteHospitalPolicy(req.params.id);
+
+    res.json({ success: true, message: 'Policy deleted from both MongoDB and PostgreSQL' });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// ==========================================
+// AI ASSISTANT SETTINGS & SYSTEM PROMPT
+// ==========================================
+
+// @desc    Get current AI Assistant settings (or initialize default)
+// @route   GET /api/admin/ai-settings
+exports.getAiSettings = async (req, res, next) => {
+  try {
+    let settings = await AiSettings.findOne();
+    if (!settings) {
+      settings = await AiSettings.create({});
+    }
+    res.json({ success: true, data: settings });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Get public AI Assistant settings (for web visitors & chat widget)
+// @route   GET /api/ai/settings
+exports.getPublicAiSettings = async (req, res, next) => {
+  try {
+    let settings = await AiSettings.findOne().lean();
+    if (!settings) {
+      settings = await AiSettings.create({});
+    }
+    res.json({
+      success: true,
+      data: {
+        hospitalName: settings.hospitalName,
+        welcomeGreeting: settings.welcomeGreeting,
+        operatingHours: settings.operatingHours,
+        emergencyPhone: settings.emergencyPhone,
+        supportEmail: settings.supportEmail,
+        address: settings.address
+      }
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+// @desc    Update AI Assistant settings
+// @route   PUT /api/admin/ai-settings
+exports.updateAiSettings = async (req, res, next) => {
+  try {
+    const {
+      hospitalName,
+      address,
+      emergencyPhone,
+      supportEmail,
+      operatingHours,
+      botPersonality,
+      welcomeGreeting,
+      outOfScopeRules,
+      customInstructions
+    } = req.body;
+
+    let settings = await AiSettings.findOne();
+    if (!settings) {
+      settings = new AiSettings();
+    }
+
+    if (hospitalName !== undefined) settings.hospitalName = hospitalName.trim();
+    if (address !== undefined) settings.address = address.trim();
+    if (emergencyPhone !== undefined) settings.emergencyPhone = emergencyPhone.trim();
+    if (supportEmail !== undefined) settings.supportEmail = supportEmail.trim();
+    if (operatingHours !== undefined) settings.operatingHours = operatingHours.trim();
+    if (botPersonality !== undefined) settings.botPersonality = botPersonality.trim();
+    if (welcomeGreeting !== undefined) settings.welcomeGreeting = welcomeGreeting.trim();
+    if (outOfScopeRules !== undefined) settings.outOfScopeRules = outOfScopeRules.trim();
+    if (customInstructions !== undefined) settings.customInstructions = customInstructions.trim();
+
+    settings.updatedAt = new Date();
+    if (req.user && req.user.id) {
+      settings.updatedBy = req.user.id;
+    }
+
+    await settings.save();
+
+    res.json({
+      success: true,
+      message: 'AI Assistant settings updated successfully',
+      data: settings
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

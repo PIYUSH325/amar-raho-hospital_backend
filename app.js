@@ -48,33 +48,51 @@ app.use('/api/contact', require('./routes/contactRoutes'));
 app.use('/api/diet', require('./routes/dietRoutes'));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 app.use('/api/chats', require('./routes/chatRoutes'));
+app.use('/api/ai', require('./routes/aiRoutes'));
 
-// Universal Hospital Public Chatbot API Gateway
+// Universal Hospital Public Chatbot Endpoint (Direct Node.js AI Engine)
+const { agentChat } = require('./ai');
+const jwt = require('jsonwebtoken');
+
 app.post('/api/public/hospital-chat', async (req, res, next) => {
   try {
-    const { message } = req.body;
+    const { message, history } = req.body;
     if (!message) {
       return res.status(400).json({ success: false, message: 'Message is required.' });
     }
 
-    const FormData = require('form-data');
-    const axios = require('axios');
-    const form = new FormData();
-    form.append('message', message);
-
-    const pythonServiceUrl = process.env.PYTHON_SERVICE_URL || 'http://127.0.0.1:8000';
-    const pythonRes = await axios.post(`${pythonServiceUrl}/public-chat`, form, {
-      headers: {
-        ...form.getHeaders(),
-        'x-gemini-api-key': process.env.GEMINI_API_KEY || ''
+    // Optional user context from Bearer token
+    let userContext = req.user || null;
+    if (!userContext && req.headers.authorization && req.headers.authorization.startsWith('Bearer ')) {
+      try {
+        const token = req.headers.authorization.split(' ')[1];
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        if (decoded && decoded.id) {
+          const User = require('./models/User');
+          const foundUser = await User.findById(decoded.id).select('-password');
+          if (foundUser) {
+            userContext = {
+              id: foundUser._id.toString(),
+              _id: foundUser._id,
+              name: foundUser.name,
+              email: foundUser.email,
+              role: foundUser.role
+            };
+          }
+        }
+      } catch (tokErr) {
+        // Continue as guest if token is expired or invalid
       }
-    });
-
-    if (pythonRes.data && pythonRes.data.status === 'success') {
-      return res.json({ success: true, reply: pythonRes.data.reply });
-    } else {
-      return res.status(500).json({ success: false, message: 'Failed to query AI chatbot.' });
     }
+
+    const result = await agentChat(message, history, userContext);
+
+    return res.json({
+      success: true,
+      reply: result.reply,
+      toolUsed: result.toolUsed,
+      toolData: result.toolData,
+    });
   } catch (error) {
     next(error);
   }

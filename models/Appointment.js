@@ -17,12 +17,34 @@ const AppointmentSchema = new mongoose.Schema({
   date: { type: String, required: true },
   time: { type: String, required: true },
   problem: { type: String, required: true },
+  notes: { type: String, default: '' },
   status: {
     type: String,
     enum: ['Scheduled', 'Approved', 'Completed', 'Cancelled'],
     default: 'Scheduled'
   },
-  createdAt: { type: Date, default: Date.now }
+  appointmentId: {
+    type: String,
+    unique: true,
+    sparse: true
+  },
+  confirmationEmailStatus: {
+    type: String,
+    enum: ['pending', 'sent', 'failed', 'not_applicable'],
+    default: 'pending'
+  },
+  createdAt: { type: Date, default: Date.now },
+  updatedAt: { type: Date, default: Date.now }
+});
+
+// Auto-generate human-readable appointment ID (e.g. ARH-10245) if not set
+AppointmentSchema.pre('save', function(next) {
+  if (!this.appointmentId) {
+    const randomSuffix = Math.floor(10000 + Math.random() * 90000);
+    this.appointmentId = `ARH-${randomSuffix}`;
+  }
+  this.updatedAt = new Date();
+  next();
 });
 
 // Dual-Write Sync to PostgreSQL

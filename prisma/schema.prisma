@@ -124,3 +124,27 @@ model Contact {
   message   String
   createdAt DateTime @default(now())
 }
+
+model HospitalPolicy {
+  id            String        @id @default(uuid())
+  title         String
+  category      String        @default("General")
+  fileName      String
+  fileUrl       String
+  fileSize      Int           @default(0)
+  extractedText String        @db.Text
+  createdAt     DateTime      @default(now())
+
+  chunks        PolicyChunk[]
+}
+
+model PolicyChunk {
+  id         String         @id @default(uuid())
+  policyId   String
+  chunkIndex Int
+  text       String         @db.Text
+  embedding  Json
+  createdAt  DateTime       @default(now())
+
+  policy     HospitalPolicy @relation(fields: [policyId], references: [id], onDelete: Cascade)
+}

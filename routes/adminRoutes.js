@@ -3,6 +3,7 @@ const router = express.Router();
 const adminController = require('../controllers/adminController');
 const { protect } = require('../middleware/auth');
 const { authorize } = require('../middleware/roleMiddleware');
+const upload = require('../middleware/upload');
 
 router.use(protect);
 
@@ -36,4 +37,14 @@ router.get('/departments', authorize('admin'), adminController.getDepartments);
 router.post('/departments', authorize('admin'), adminController.createDepartment);
 router.delete('/departments/:id', authorize('admin'), adminController.deleteDepartment);
 
+// Hospital Policies RAG (Admin only)
+router.get('/policies', authorize('admin'), adminController.getPolicies);
+router.post('/policies', authorize('admin'), upload.single('file'), adminController.uploadPolicyPdf);
+router.delete('/policies/:id', authorize('admin'), adminController.deletePolicy);
+
+// AI Assistant Settings & Dynamic Instructions (Admin only)
+router.get('/ai-settings', authorize('admin'), adminController.getAiSettings);
+router.put('/ai-settings', authorize('admin'), adminController.updateAiSettings);
+
 module.exports = router;
+

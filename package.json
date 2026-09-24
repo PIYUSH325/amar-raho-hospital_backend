@@ -8,6 +8,7 @@
     "dev": "nodemon server.js"
   },
   "dependencies": {
+    "@google/generative-ai": "^0.24.1",
     "@prisma/client": "^6.4.1",
     "agora-rtc-sdk-ng": "^4.24.7",
     "axios": "^1.19.0",

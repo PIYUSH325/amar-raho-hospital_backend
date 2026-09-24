@@ -21,7 +21,7 @@ const initSocket = (server) => {
     // 1b. Register User for Global Notifications
     socket.on('register', ({ userId }) => {
       socket.join(`user_${userId}`);
-      console.log(`👤 User registered in socket room: user_${userId}`);
+      // console.log(`👤 User registered in socket room: user_${userId}`);
     });
 
     // 2. Real-time Message Send
