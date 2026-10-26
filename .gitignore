@@ -1,7 +1,23 @@
-echo "node_modules" > .gitignore
-echo ".env" >> .gitignore
-
-
-.env
-.env.local
+# Dependencies
 node_modules/
+
+# Environment variables & Sensitive files
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.cert
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# Uploads & Temp files
+uploads/*
+!uploads/.gitkeep
+
+# OS files
+.DS_Store
+Thumbs.db
