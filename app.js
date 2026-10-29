@@ -15,17 +15,17 @@ const allowedOrigins = [
 app.use(cors({
   origin: function (origin, callback) {
     if (!origin) return callback(null, true);
-    
+
     // Check if origin is whitelisted, local subnet, or is a Vercel deployment URL
-    const isAllowed = 
-      allowedOrigins.indexOf(origin) !== -1 || 
+    const isAllowed =
+      allowedOrigins.indexOf(origin) !== -1 ||
       origin.includes('.vercel.app') ||
       origin.includes('localhost') ||
       origin.includes('127.0.0.1') ||
       origin.startsWith('http://192.168.') ||
       origin.startsWith('http://172.') ||
       origin.startsWith('http://10.');
-      
+
     if (isAllowed) {
       callback(null, true);
     } else {
