@@ -1,5 +1,6 @@
 const axios = require('axios');
 const nodemailer = require('nodemailer');
+const dns = require('dns');
 
 /**
  * Centralized Email Sending Utility
@@ -94,7 +95,9 @@ const sendEmail = async (options) => {
           user: smtpUser,
           pass: smtpPass
         },
-        family: 4, // Force IPv4 to prevent Windows/Node dual-stack DNS timeouts
+        lookup: (hostname, options, callback) => {
+          dns.lookup(hostname, { family: 4 }, callback);
+        },
         connectionTimeout: 10000,
         greetingTimeout: 10000
       });
