@@ -5,11 +5,11 @@
 const { getGeminiClient } = require('./geminiClient');
 
 const MODELS = {
-  DEFAULT: 'gemini-3.5-flash-lite',
-  FAST: 'gemini-3.5-flash-lite',
-  PRO: 'gemini-3.6-flash',
+  DEFAULT: 'gemini-1.5-flash',
+  FAST: 'gemini-1.5-flash',
+  PRO: 'gemini-1.5-pro',
   FALLBACK: 'gemini-1.5-flash',
-  EMBEDDING: 'gemini-embedding-001',
+  EMBEDDING: 'text-embedding-004',
 };
 
 const DEFAULT_CONFIG = {
