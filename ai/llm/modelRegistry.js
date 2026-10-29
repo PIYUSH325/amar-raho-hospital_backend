@@ -8,7 +8,7 @@ const MODELS = {
   DEFAULT: 'gemini-3.5-flash-lite',
   FAST: 'gemini-3.5-flash-lite',
   PRO: 'gemini-3.6-flash',
-  FALLBACK: 'gemini-1.5-flash',
+  FALLBACK: 'gemini-3.5-flash-lite',
   EMBEDDING: 'gemini-embedding-001',
 };
 
