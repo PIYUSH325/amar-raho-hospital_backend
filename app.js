@@ -85,39 +85,14 @@ app.post('/api/public/hospital-chat', async (req, res, next) => {
       }
     }
 
-    try {
-      const result = await agentChat(message, history, userContext);
-      return res.json({
-        success: true,
-        reply: result.reply,
-        toolUsed: result.toolUsed,
-        toolData: result.toolData,
-      });
-    } catch (aiErr) {
-      console.warn('⚠️ AI Engine error:', aiErr.message, '- Using hospital automated fallback.');
+    const result = await agentChat(message, history, userContext);
 
-      const query = (message || '').toLowerCase();
-      let reply = "Hello! Welcome to Amar Raho Hospital. I am your hospital assistant. I can help guide you on our doctors, departments, visiting timings, and online appointment booking. What would you like to know?";
-
-      if (query.includes('doctor') || query.includes('specialist')) {
-        reply = "We have qualified doctors across General Medicine, Cardiology, Neurology, Pediatrics, and Orthopedics. You can view all our verified doctors and consult fees directly on the Doctors page!";
-      } else if (query.includes('appointment') || query.includes('book')) {
-        reply = "You can book an appointment easily through our portal! Head over to the Appointment section or log in to your patient dashboard to choose your specialist and book a time slot.";
-      } else if (query.includes('timing') || query.includes('hour') || query.includes('open') || query.includes('time')) {
-        reply = "Our Emergency Department and ICU operate 24/7. Outpatient (OPD) clinics and doctor consultations run Monday through Saturday from 9:00 AM to 7:00 PM.";
-      } else if (query.includes('emergency') || query.includes('urgent') || query.includes('ambulance')) {
-        reply = "🚨 For emergency medical care or ambulance requests, please dial our 24/7 Emergency Line immediately at +91 98765-AMAR-1 or visit our Emergency Care unit.";
-      } else if (query.includes('contact') || query.includes('phone') || query.includes('address') || query.includes('location')) {
-        reply = "Amar Raho Hospital is located at Plot 404, Swarg Lok U-Turn, Narak-Pur. You can contact our support line at +91 98765-AMAR-1 or email us at support@amarrahohospital.com.";
-      }
-
-      return res.json({
-        success: true,
-        reply,
-        toolUsed: 'hospital-automated-fallback',
-        toolData: null,
-      });
-    }
+    return res.json({
+      success: true,
+      reply: result.reply,
+      toolUsed: result.toolUsed,
+      toolData: result.toolData,
+    });
   } catch (error) {
     next(error);
   }
